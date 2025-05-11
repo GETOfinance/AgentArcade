@@ -2,7 +2,7 @@
 
 Agent Arcade is an AI-powered platform that enables users to create, deploy, and interact with various types of blockchain agents on the Rootstock Testnet network. The platform provides a user-friendly interface for creating and managing agents specialized in DeFi, gaming, and social interactions.
 
-![Agent Arcade Dashboard](https://placeholder.com/dashboard-screenshot.png)
+![Agent Arcade Dashboard](/assets/bg.jpg)
 
 ## Table of Contents
 
