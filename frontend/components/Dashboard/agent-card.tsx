@@ -20,16 +20,16 @@ const AgentCard = (props: TProps) => {
   const router = useRouter();
 
   return (
-    <div className="w-[35rem] ">
-      <Card className="hover:border-gray-500">
+    <div className="w-full">
+      <Card className="hover:border-gray-500 h-full">
         <CardContent className="pt-4">
           <div className="flex gap-4">
             <div className="flex items-center">
               <Image src={props.image} width={70} height={10} alt="Agent" className="rounded-full h-[70px]" />
             </div>
-            <div className="p-2 w-[80%]">
+            <div className="p-2 flex-1 overflow-hidden">
               <h1 className="text-xl font-semibold">{props.name}</h1>
-              <p className="text-sm">{props.description}</p>
+              <p className="text-sm line-clamp-3">{props.description}</p>
               <div className="flex gap-4 mt-2">
                 <span className="flex gap-2">
                   <GoPeople />
@@ -45,7 +45,7 @@ const AgentCard = (props: TProps) => {
         </CardContent>
         <p className="bg-secondary p-1 text-sm rounded-2xl block w-[7.5rem] ml-6 text-center">{props.contractAddress}</p>
         <CardFooter className="mt-4 border-t-2 border-gray-900 pt-4 gap-4">
-          <Button variant={"outline"} className="w-[90%]" onClick={() => router.push(`/chat/agent`)}>
+          <Button variant={"outline"} className="w-[90%]" onClick={() => router.push(`/chat/${props.name}`)}>
             Chat
           </Button>
           <Button variant={"outline"}>

@@ -4,15 +4,15 @@ import { CommunicateDto } from './dto/communicate.dto';
 import { CreateAgentRepository } from '../create-agent/create-agent.repository';
 import { CreateElizaAgentRepository } from '../create-agent/create-eliza-agent.repository';
 import { SDK } from '../create-agent/dto/create-agent-dto';
-import { CovalentAgentService } from 'src/lib/covalent-agent/covalent-agent.service';
+import { OpenAIService } from 'src/lib/openai/openai.service';
 
 @Injectable()
 export class CommunicateService {
   constructor(
     private readonly agentKitService: CoinbaseAgentService,
-    private readonly covalentAgentService: CovalentAgentService,
     private readonly createAgentRepository: CreateAgentRepository,
     private readonly createElizaAgentRepository: CreateElizaAgentRepository,
+    private readonly openAIService: OpenAIService,
   ) {}
 
   async comunicate(agentName: string, communicateDto: CommunicateDto) {
@@ -24,10 +24,15 @@ export class CommunicateService {
       const elizaAgent = await this.createElizaAgentRepository.findByName(agentName);
 
       if (elizaAgent) {
-        // For eliza agents, we'll return a mock response
+        // For eliza agents, use OpenAI to generate a response
         const userMessage = communicateDto.message || communicateDto.userInput || '';
+        const response = await this.openAIService.generateResponse(
+          agentName,
+          elizaAgent.bio,
+          userMessage
+        );
         return {
-          message: `Hello! I'm ${agentName}, an AI assistant created for testing purposes. You said: "${userMessage}". How can I help you today?`
+          message: response
         };
       }
 
@@ -35,11 +40,16 @@ export class CommunicateService {
     }
 
     // For testing purposes, if the agent doesn't have an SDK (like our TestAgent),
-    // we'll return a mock response
+    // use OpenAI to generate a response
     if (!agent.sdk) {
       const userMessage = communicateDto.message || communicateDto.userInput || '';
+      const response = await this.openAIService.generateResponse(
+        agentName,
+        ['A DeFi assistant specialized in Rootstock Testnet blockchain'],
+        userMessage
+      );
       return {
-        message: `Hello! I'm ${agentName}, an AI assistant created for testing purposes. You said: "${userMessage}". How can I help you today?`
+        message: response
       };
     }
 
@@ -51,12 +61,7 @@ export class CommunicateService {
           userMessage,
         );
         return res;
-      case SDK.COVALENT:
-        const response = await this.covalentAgentService.runCovalentAgent(
-          agentName,
-          userMessage,
-        );
-        return response;
+      // Covalent case removed
       default:
         return { message: `Agent ${agentName} has an unknown SDK type: ${agent.sdk}` };
     }

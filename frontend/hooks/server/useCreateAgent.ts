@@ -13,8 +13,8 @@ export const useCreateAgent = () => {
   const createAgent = async (agentArgs: TAgentArgs) => {
     const knowledgeArray = agentArgs.knowledge?.split(",").map((item) => item.trim());
 
-    // Determine the endpoint based on the chain (default to rootstock)
-    const endpoint = agentArgs.chain === "rootstock" ? "/create-agent/rootstock" : "/create-agent/flow";
+    // Always use the rootstock endpoint
+    const endpoint = "/create-agent/rootstock";
 
     const data = await fetch(endpoint, {
       method: "POST",

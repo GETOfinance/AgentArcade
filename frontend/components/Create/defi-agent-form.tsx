@@ -54,6 +54,13 @@ const DefiAgentForm = () => {
 
   const form = useForm<z.infer<typeof AgentSchema>>({
     resolver: zodResolver(AgentSchema),
+    defaultValues: {
+      agentName: "",
+      agentBio: "",
+      sdk: "eliza",
+      chain: "rootstock",
+      knowledge: ""
+    }
   });
 
   async function onSubmit(values: z.infer<typeof AgentSchema>) {
@@ -67,15 +74,24 @@ const DefiAgentForm = () => {
         return newSteps;
       });
 
-      // Force the chain value to be rootstock and include contract address if available
+      // Make sure we have all required fields
+      if (!values.agentName || !values.agentBio || !values.knowledge) {
+        throw new Error("Please fill in all required fields: Agent Name, Agent Description, and Agent Tasks");
+      }
+
+      // Format the data to match the backend's expectations
       const updatedValues = {
-        ...values,
-        agentType: "defi",
+        agentName: values.agentName,
+        bio: [values.agentBio], // Convert to array as expected by backend
+        type: "defi", // Use the correct field name
+        knowledge: values.knowledge.split(',').map(item => item.trim()), // Convert to array
         chain: "rootstock",
         contractAddress: contractAddress || undefined
       };
 
-      // Call the rootstock endpoint instead of flow
+      console.log("Sending data to backend:", updatedValues);
+
+      // Call the rootstock endpoint
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/create-agent/rootstock`, {
         method: 'POST',
         headers: {
@@ -185,11 +201,11 @@ const DefiAgentForm = () => {
                 ],
               });
             } catch (addError) {
-              console.error('Error adding Rootstock network:', addError);
-              throw new Error('Could not add Rootstock network to your wallet');
+              console.error('Error adding Rootstock Testnet network:', addError);
+              throw new Error('Could not add Rootstock Testnet network to your wallet');
             }
           } else {
-            throw new Error('Could not switch to Rootstock network');
+            throw new Error('Could not switch to Rootstock Testnet network');
           }
         }
       }
@@ -307,15 +323,13 @@ const DefiAgentForm = () => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>SDK</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} defaultValue={field.value || "eliza"}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select the SDK" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="agent-kit">Coinbase Agent kit</SelectItem>
-                    <SelectItem value="covalent">Covalent</SelectItem>
                     <SelectItem value="eliza">Eliza OS</SelectItem>
                   </SelectContent>
                 </Select>
@@ -360,7 +374,7 @@ const DefiAgentForm = () => {
             )}
           />
           <div className="flex gap-4">
-            <Button type="submit" className="w-full text-sm" onClick={createTokenHandler}>
+            <Button type="button" className="w-full text-sm" onClick={createTokenHandler}>
               Create Token
             </Button>
             {loading ? (

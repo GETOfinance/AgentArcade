@@ -6,8 +6,7 @@
   "settings": {
     "chains": {
       "evm": [
-        "flowTestnet",
-        "arbitrumNova"
+        "opencampuscodex"
       ]
     },
     "voice": {
@@ -121,5 +120,5 @@
   ],
   "name": "TestRootstockAgent2",
   "contractAddress": "0x123456789abcdef",
-  "chain": "rootstock"
+  "chain": "opencampuscodex"
 }

@@ -3,11 +3,12 @@ import { ChatBubble, ChatBubbleMessage, ChatBubbleTimestamp } from "@/components
 import { ChatInput } from "@/components/ui/chat/chat-input";
 import { ChatMessageList } from "@/components/ui/chat/chat-message-list";
 import { useTransition, animated, type AnimatedProps } from "@react-spring/web";
-import { Paperclip, Send, X } from "lucide-react";
+import { Paperclip, Send, X, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { Content, UUID } from "@elizaos/core";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
+import { apiClient as backendApiClient } from "@/lib/api-client";
 import { cn, moment } from "@/lib/utils";
 import { Avatar, AvatarImage } from "./ui/avatar";
 import CopyButton from "./copy-button";
@@ -19,6 +20,9 @@ import type { IAttachment } from "@/types";
 import { AudioRecorder } from "./audio-recorder";
 import { Badge } from "./ui/badge";
 import { useAutoScroll } from "./ui/chat/hooks/useAutoScroll";
+import { WalletButton } from "./wallet-button";
+import { useWallet } from "@/contexts/wallet-context";
+import { ethers } from "ethers";
 
 type ExtraContentFields = {
   user: string;
@@ -34,8 +38,10 @@ type AnimatedDivProps = AnimatedProps<{ style: React.CSSProperties }> & {
 
 export default function Page({ agentId }: { agentId: UUID }) {
   const { toast } = useToast();
+  const { sendTransaction, isConnected, connect } = useWallet();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [input, setInput] = useState("");
+  const [isProcessingTransaction, setIsProcessingTransaction] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -111,10 +117,174 @@ export default function Page({ agentId }: { agentId: UUID }) {
     }
   }, []);
 
+  // Function to process transaction requests from the agent
+  const processTransactionRequest = async (message: string) => {
+    try {
+      // Regular expression to match "Please send X tRBTC to 0x..."
+      const transactionRegex = /Please send (\d+\.?\d*) tRBTC to (0x[a-fA-F0-9]{40})/i;
+      const match = message.match(transactionRegex);
+
+      if (!match) return false;
+
+      const amount = match[1];
+      const toAddress = match[2];
+
+      // Validate the address and amount
+      if (!ethers.utils.isAddress(toAddress)) {
+        // Add error message to the chat
+        queryClient.setQueryData(["messages", agentId], (old: ContentWithUser[] = []) => [
+          ...old,
+          {
+            text: `❌ Invalid address format: ${toAddress}`,
+            user: "system",
+            createdAt: Date.now(),
+          },
+        ]);
+        return true;
+      }
+
+      if (isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+        // Add error message to the chat
+        queryClient.setQueryData(["messages", agentId], (old: ContentWithUser[] = []) => [
+          ...old,
+          {
+            text: `❌ Invalid amount: ${amount}`,
+            user: "system",
+            createdAt: Date.now(),
+          },
+        ]);
+        return true;
+      }
+
+      // Check if wallet is connected
+      if (!isConnected) {
+        toast({
+          title: "Wallet not connected",
+          description: "Please connect your wallet to send transactions",
+          variant: "destructive",
+        });
+
+        // Try to connect the wallet
+        try {
+          await connect();
+
+          // If connection was successful, show a message to try again
+          queryClient.setQueryData(["messages", agentId], (old: ContentWithUser[] = []) => [
+            ...old,
+            {
+              text: "Wallet connected! Please try sending the transaction again.",
+              user: "system",
+              createdAt: Date.now(),
+            },
+          ]);
+
+          return true;
+        } catch (error) {
+          console.error("Error connecting wallet:", error);
+
+          // Add error message to the chat
+          queryClient.setQueryData(["messages", agentId], (old: ContentWithUser[] = []) => [
+            ...old,
+            {
+              text: "Failed to connect wallet. Please try connecting manually using the wallet button at the top.",
+              user: "system",
+              createdAt: Date.now(),
+            },
+          ]);
+
+          return true;
+        }
+      }
+
+      // Ask for confirmation
+      const confirmMessage = `Do you want to send ${amount} tRBTC to ${toAddress}?`;
+
+      if (window.confirm(confirmMessage)) {
+        setIsProcessingTransaction(true);
+
+        try {
+          // Send the transaction
+          const result = await sendTransaction(toAddress, amount);
+
+          if (!result || !result.hash) {
+            throw new Error("Transaction failed with no error message");
+          }
+
+          // Add transaction result to the chat
+          queryClient.setQueryData(["messages", agentId], (old: ContentWithUser[] = []) => [
+            ...old,
+            {
+              text: `✅ Transaction sent successfully!\n\nAmount: ${amount} tRBTC\nTo: ${toAddress}\nTransaction Hash: ${result.hash}\n\nYou can view this transaction on the [Rootstock Explorer](https://explorer.testnet.rootstock.io/tx/${result.hash})`,
+              user: "system",
+              createdAt: Date.now(),
+            },
+          ]);
+
+          toast({
+            title: "Transaction Sent",
+            description: `Successfully sent ${amount} tRBTC to ${toAddress.substring(0, 8)}...`,
+          });
+        } catch (error: any) {
+          console.error("Transaction error:", error);
+
+          // Add error message to the chat
+          queryClient.setQueryData(["messages", agentId], (old: ContentWithUser[] = []) => [
+            ...old,
+            {
+              text: `❌ Transaction failed: ${error.message || "Unknown error"}`,
+              user: "system",
+              createdAt: Date.now(),
+            },
+          ]);
+
+          toast({
+            title: "Transaction Failed",
+            description: error.message || "Failed to send transaction",
+            variant: "destructive",
+          });
+        } finally {
+          setIsProcessingTransaction(false);
+        }
+      } else {
+        // User declined the transaction
+        queryClient.setQueryData(["messages", agentId], (old: ContentWithUser[] = []) => [
+          ...old,
+          {
+            text: "Transaction cancelled by user.",
+            user: "system",
+            createdAt: Date.now(),
+          },
+        ]);
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error processing transaction request:", error);
+      setIsProcessingTransaction(false);
+      return false;
+    }
+  };
+
   const sendMessageMutation = useMutation({
     mutationKey: ["send_message", agentId],
-    mutationFn: ({ message, selectedFile }: { message: string; selectedFile?: File | null }) => apiClient.sendMessage(agentId, message, selectedFile),
-    onSuccess: (newMessages: ContentWithUser[]) => {
+    mutationFn: async ({ message, selectedFile }: { message: string; selectedFile?: File | null }) => {
+      try {
+        // Use our backend API client to communicate with the agent
+        const response = await backendApiClient.communicateWithAgent(agentId, message);
+        return [
+          {
+            text: response.response.message,
+            user: "system",
+            createdAt: Date.now(),
+          },
+        ];
+      } catch (error) {
+        console.error("Error communicating with agent:", error);
+        throw error;
+      }
+    },
+    onSuccess: async (newMessages: ContentWithUser[]) => {
+      // Update the messages in the query cache
       queryClient.setQueryData(["messages", agentId], (old: ContentWithUser[] = []) => [
         ...old.filter((msg) => !msg.isLoading),
         ...newMessages.map((msg) => ({
@@ -122,6 +292,12 @@ export default function Page({ agentId }: { agentId: UUID }) {
           createdAt: Date.now(),
         })),
       ]);
+
+      // Check if the agent's response contains a transaction request
+      if (newMessages.length > 0) {
+        const agentMessage = newMessages[0].text;
+        await processTransactionRequest(agentMessage);
+      }
     },
     onError: (e) => {
       toast({
@@ -152,6 +328,9 @@ export default function Page({ agentId }: { agentId: UUID }) {
 
   return (
     <div className="flex flex-col w-full h-[calc(100dvh)] p-4">
+      <div className="flex justify-end mb-2">
+        <WalletButton />
+      </div>
       <div className="flex-1 overflow-y-auto">
         <ChatMessageList ref={scrollRef} isAtBottom={isAtBottom} scrollToBottom={scrollToBottom} disableAutoScroll={disableAutoScroll}>
           {transitions((style, message: ContentWithUser) => {
@@ -265,9 +444,18 @@ export default function Page({ agentId }: { agentId: UUID }) {
               </TooltipContent>
             </Tooltip>
             <AudioRecorder agentId={agentId} onChange={(newInput: string) => setInput(newInput)} />
-            <Button disabled={!input || sendMessageMutation?.isPending} type="submit" size="sm" className="ml-auto gap-1.5 h-[30px]">
-              {sendMessageMutation?.isPending ? "..." : "Send Message"}
-              <Send className="size-3.5" />
+            <Button
+              disabled={!input || sendMessageMutation?.isPending || isProcessingTransaction}
+              type="submit"
+              size="sm"
+              className="ml-auto gap-1.5 h-[30px]"
+            >
+              {sendMessageMutation?.isPending ? "..." : isProcessingTransaction ? "Processing Transaction..." : "Send Message"}
+              {isProcessingTransaction ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Send className="size-3.5" />
+              )}
             </Button>
           </div>
         </form>

@@ -4,7 +4,6 @@ import { ZeeController } from './zee.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Zee, ZeeSchema } from './zee.schema';
 import { ZeeRepository } from './zee.repository';
-import { CovalentAgentModule } from 'src/lib/covalent-agent/covalent-agent.module';
 
 // Check if SKIP_MONGODB environment variable is set
 const skipMongoDB = process.env.SKIP_MONGODB === 'true';
@@ -15,7 +14,7 @@ const skipMongoDB = process.env.SKIP_MONGODB === 'true';
     ...(skipMongoDB
       ? []
       : [MongooseModule.forFeature([{ name: Zee.name, schema: ZeeSchema }])]),
-    CovalentAgentModule.register(),
+    // CovalentAgentModule removed
   ],
   controllers: [ZeeController],
   providers: [ZeeService, ZeeRepository],

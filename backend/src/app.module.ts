@@ -6,6 +6,7 @@ import { CommunicateModule } from './core/resources/communicate/communicate.modu
 import { CreateAgentModule } from './core/resources/create-agent/create-agent.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ZeeModule } from './core/resources/zee/zee.module';
+import { OpenAIModule } from './lib/openai/openai.module';
 
 // Check if SKIP_MONGODB environment variable is set
 const skipMongoDB = process.env.SKIP_MONGODB === 'true';
@@ -41,6 +42,7 @@ const skipMongoDB = process.env.SKIP_MONGODB === 'true';
     CommunicateModule,
     CreateAgentModule,
     ZeeModule,
+    OpenAIModule,
   ],
   controllers: [AppController],
   providers: [AppService],

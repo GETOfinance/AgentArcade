@@ -4,8 +4,7 @@
   "settings": {
     "chains": {
       "evm": [
-        "flowTestnet",
-        "arbitrumNova"
+        "opencampuscodex"
       ]
     },
     "voice": {

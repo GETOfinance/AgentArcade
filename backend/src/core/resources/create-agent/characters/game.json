@@ -3,7 +3,7 @@
   "gameProvider": "openai",
   "settings": {
     "chains": {
-      "evm": ["flowTestnet", "arbitrumNova"]
+      "evm": ["rootstock"]
     },
     "difficulty": "medium",
     "graphics": "text-based",

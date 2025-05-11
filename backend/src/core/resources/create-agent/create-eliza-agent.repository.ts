@@ -73,4 +73,27 @@ export class CreateElizaAgentRepository {
     const agent = await this.elizaAgentModel.findOne().sort({ createdAt: -1 });
     return agent;
   }
+
+  async findAll() {
+    if (this.skipMongoDB) {
+      return inMemoryElizaAgents;
+    }
+
+    const agents = await this.elizaAgentModel.find().sort({ createdAt: -1 });
+    return agents;
+  }
+
+  async deleteByName(agentName: string) {
+    if (this.skipMongoDB) {
+      const index = inMemoryElizaAgents.findIndex(agent => agent.agentName === agentName);
+      if (index !== -1) {
+        inMemoryElizaAgents.splice(index, 1);
+        return true;
+      }
+      return false;
+    }
+
+    const result = await this.elizaAgentModel.deleteOne({ agentName });
+    return result.deletedCount > 0;
+  }
 }

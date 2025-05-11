@@ -69,7 +69,7 @@ export function AppKit({ children }: { children: React.ReactNode }) {
 
           console.log('Current chain ID:', currentChainId);
 
-          // Only switch if not already on Rootstock
+          // Only switch if not already on Rootstock Testnet
           if (currentChainId !== 31) {
             console.log('Switching to Rootstock Testnet...');
 
@@ -86,7 +86,7 @@ export function AppKit({ children }: { children: React.ReactNode }) {
 
               // This error code indicates that the chain has not been added to MetaMask
               if (switchError.code === 4902) {
-                console.log('Rootstock not found, adding network...');
+                console.log('Rootstock Testnet not found, adding network...');
 
                 try {
                   // @ts-ignore
@@ -109,10 +109,10 @@ export function AppKit({ children }: { children: React.ReactNode }) {
 
                   console.log('Rootstock Testnet added successfully');
                 } catch (addError) {
-                  console.error('Error adding Rootstock network:', addError);
+                  console.error('Error adding Rootstock Testnet network:', addError);
                 }
               } else {
-                console.error('Error switching to Rootstock:', switchError);
+                console.error('Error switching to Rootstock Testnet:', switchError);
               }
             }
           }
@@ -190,7 +190,7 @@ export function AppKit({ children }: { children: React.ReactNode }) {
           const newChainId = parseInt(chainIdHex, 16);
           setChainId(newChainId);
 
-          // Alert user if they're not on Rootstock
+          // Alert user if they're not on Rootstock Testnet
           if (newChainId !== 31) {
             console.log('Not on Rootstock Testnet');
           }

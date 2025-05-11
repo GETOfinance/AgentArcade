@@ -2,7 +2,7 @@ import { IsArray, IsNotEmpty, IsString } from 'class-validator';
 
 export enum SDK {
   AGENT_KIT = 'agent-kit',
-  COVALENT = 'covalent',
+  // COVALENT option removed
 }
 
 export enum TYPE {

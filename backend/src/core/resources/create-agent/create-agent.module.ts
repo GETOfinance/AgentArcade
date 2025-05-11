@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { CreateAgentService } from './create-agent.service';
 import { CreateAgentController } from './create-agent.controller';
 import { CoinbaseAgentModule } from 'src/lib/coinbase-agent/coinbase-agent.module';
-import { CovalentAgentModule } from 'src/lib/covalent-agent/covalent-agent.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import {
   Agent,
@@ -28,7 +27,7 @@ const skipMongoDB = process.env.SKIP_MONGODB === 'true';
           ]),
         ]),
     CoinbaseAgentModule.register(),
-    CovalentAgentModule.register(),
+    // CovalentAgentModule removed
   ],
   controllers: [CreateAgentController],
   providers: [

@@ -49,10 +49,55 @@ const DefiAgentForm = () => {
 
   const form = useForm<z.infer<typeof AgentSchema>>({
     resolver: zodResolver(AgentSchema),
+    defaultValues: {
+      agentName: "",
+      agentBio: "",
+      sdk: "eliza",
+      chain: "rootstock",
+      knowledge: ""
+    }
   });
 
   async function onSubmit(values: z.infer<typeof AgentSchema>) {
-    await mutateAsync({ ...values, agentType: "defi" });
+    // Format the data to match the backend's expectations
+    const formattedData = {
+      agentName: values.agentName,
+      bio: [values.agentBio], // Convert to array as expected by backend
+      type: "social", // Use the correct field name
+      knowledge: values.knowledge ? values.knowledge.split(',').map(item => item.trim()) : [], // Convert to array
+      chain: "rootstock"
+    };
+
+    console.log("Sending data to backend:", formattedData);
+
+    // Call the backend directly instead of using mutateAsync
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/create-agent/rootstock`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formattedData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error creating agent: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('Agent created successfully:', data);
+
+      // Update the steps
+      setSteps((prevSteps) => {
+        const newSteps = [...prevSteps];
+        newSteps[4] = { text: "Agent created successfully!", status: "complete" };
+        newSteps[5] = { text: "Agent containerized successfully!", status: "complete" };
+        return newSteps;
+      });
+
+    } catch (error) {
+      console.error("Error creating agent:", error);
+    }
   }
   const createTokenHandler = async () => {
     //@ts-expect-error nothing bro don;t worry
@@ -105,15 +150,13 @@ const DefiAgentForm = () => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>SDK</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} defaultValue={field.value || "eliza"}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select the SDK" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="agent-kit">Coinbase Agent kit</SelectItem>
-                    <SelectItem value="covalent">Covalent</SelectItem>
                     <SelectItem value="eliza">Eliza OS</SelectItem>
                   </SelectContent>
                 </Select>
@@ -128,19 +171,17 @@ const DefiAgentForm = () => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Chain</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} defaultValue={field.value || "rootstock"}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select the Chain" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="flow">Flow</SelectItem>
-                    <SelectItem value="base">Base</SelectItem>
-                    <SelectItem value="arbitrum">Arbitrum</SelectItem>
+                    <SelectItem value="rootstock">Rootstock Testnet</SelectItem>
                   </SelectContent>
                 </Select>
-                <FormDescription>Select the chain you want to deploy your agent on(flow default)</FormDescription>
+                <FormDescription>Select the chain you want to deploy your agent on (Rootstock Testnet)</FormDescription>
                 <FormMessage />
               </FormItem>
             )}

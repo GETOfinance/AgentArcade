@@ -1,48 +1,78 @@
-import AgentCard from "./agent-card";
+"use client";
 
-const DUMMY_DATA = [
-  {
-    name: "Chill girl",
-    description: "A talented ASMR artist dedicated to creating immersive audio experiences to help listener focus.",
-    contractAddress: "0x3D6A...66A5",
-    category: "Social",
-    image: "/agent.png",
-  },
-  {
-    name: "Defi DUDE",
-    description: "A skilled trader and investor, proficient in the world of decentralized finance.",
-    contractAddress: "0x5f6A...6b45",
-    category: "DeFi",
-    image: "/image2.jpg",
-  },
-  {
-    name: "Beast Hunter",
-    description: "Master of clutch moments, risky plays, and unnecessary taunts.",
-    category: "Gaming",
-    image: "/game.jpg",
-    contractAddress: "0xac78...9d2b",
-  },
-  {
-    name: "Degen bro",
-    description: "Started DeFi trading with a ‘send it’ philosophy—research optional.",
-    category: "Gaming",
-    image: "/degen.jpg",
-    contractAddress: "0x34c8...baf7",
-  },
-];
+import { useEffect, useState } from "react";
+import AgentCard from "./agent-card";
+import { apiClient, Agent } from "@/lib/api-client";
+
+// We'll only display agents from the database
 
 const AgentCards = () => {
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchAgents = async () => {
+      try {
+        const data = await apiClient.getAllAgents();
+        setAgents(data);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching agents:", err);
+        setError("Failed to load agents");
+        setLoading(false);
+      }
+    };
+
+    fetchAgents();
+  }, []);
+
+  // If loading, show a loading message
+  if (loading) {
+    return <div className="text-center p-4">Loading agents...</div>;
+  }
+
+  // If error, show an error message
+  if (error) {
+    return <div className="text-center p-4 text-red-500">{error}</div>;
+  }
+
+  // Filter out AI companion agents
+  const filteredAgents = agents.filter(agent => agent.type.toLowerCase() !== 'ai-companion');
+
+  // If no non-AI companion agents found, show a message
+  if (filteredAgents.length === 0) {
+    return <div className="text-center p-4">No agents found. Create your first agent!</div>;
+  }
+
+  // Sort agents by creation date (most recent first) and take up to 4
+  const sortedAgents = [...filteredAgents].sort((a, b) =>
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+  const displayAgents = sortedAgents.slice(0, 4);
+
   return (
-    <div className="flex gap-4 flex-wrap">
-      {DUMMY_DATA.map((data) => {
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Display up to 4 agents from the database, 2 per row */}
+      {displayAgents.map((agent) => {
+        // Determine the image path based on agent type
+        let imagePath = '/defi.jpg'; // Default image
+
+        if (agent.type.toLowerCase() === 'game' || agent.type.toLowerCase() === 'gaming') {
+          imagePath = '/game.jpg';
+        } else if (agent.type.toLowerCase() === 'social') {
+          imagePath = '/agent.png';
+        }
+        // AI companion agents are filtered out
+
         return (
           <AgentCard
-            key={data.contractAddress}
-            name={data.name}
-            description={data.description}
-            contractAddress={data.contractAddress}
-            category={data.category}
-            image={data.image}
+            key={agent.id}
+            name={agent.agentName}
+            description={Array.isArray(agent.bio) ? agent.bio.join(" ") : agent.bio}
+            contractAddress={agent.contractAddress || `0x${agent.id.substring(0, 4)}...${agent.id.substring(agent.id.length - 4)}`}
+            category={agent.type.charAt(0).toUpperCase() + agent.type.slice(1)} // Capitalize the first letter
+            image={imagePath}
           />
         );
       })}

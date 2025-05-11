@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { CreateAgentDto, CreateElizaAgentDto } from './dto/create-agent-dto';
+import { CreateAgentDto, CreateElizaAgentDto, TYPE } from './dto/create-agent-dto';
 import * as path from 'path';
 import { CreateAgentRepository } from './create-agent.repository';
 import * as fs from 'fs';
@@ -21,10 +21,151 @@ export class CreateAgentService {
     return newAgent;
   }
 
+  async getAllAgents() {
+    try {
+      // Get all agents from the ElizaAgent collection
+      const agents = await this.createElizaAgentRepository.findAll();
+
+      return {
+        status: HttpStatus.OK,
+        agents: agents.map(agent => ({
+          id: agent._id,
+          agentName: agent.agentName,
+          bio: agent.bio,
+          type: agent.type,
+          knowledge: agent.knowledge,
+          chain: agent.chain,
+          contractAddress: agent.contractAddress,
+          imageName: agent.imageName,
+          port: agent.port,
+          createdAt: agent.createdAt
+        }))
+      };
+    } catch (error) {
+      console.error('Error fetching agents:', error);
+      return {
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+        error: error.message
+      };
+    }
+  }
+
+  async getAgentStats() {
+    try {
+      // Get all agents from the ElizaAgent collection
+      const agents = await this.createElizaAgentRepository.findAll();
+
+      console.log('Found agents:', agents.map(a => ({ name: a.agentName, type: a.type })));
+
+      // Calculate stats from the actual database
+      const totalAgents = agents.length;
+
+      // Count agents by type (case-insensitive comparison)
+      const gameAgents = agents.filter(agent =>
+        agent.type?.toLowerCase() === 'game').length;
+
+      const defiAgents = agents.filter(agent =>
+        agent.type?.toLowerCase() === 'defi').length;
+
+      const socialAgents = agents.filter(agent =>
+        agent.type?.toLowerCase() === 'social').length;
+
+      // Calculate percentage changes (for demo purposes, we'll use fixed values)
+      // In a real app, you might compare with previous period data
+      const characterChange = '+12%';
+      const gameChange = '+6%';
+      const defiChange = '+6%';
+      const socialChange = '+6%';
+
+      return {
+        status: HttpStatus.OK,
+        stats: {
+          totalCharacters: {
+            value: totalAgents,
+            change: characterChange
+          },
+          totalGames: {
+            value: gameAgents,
+            change: gameChange
+          },
+          totalDefi: {
+            value: defiAgents,
+            change: defiChange
+          },
+          totalSocial: {
+            value: socialAgents,
+            change: socialChange
+          }
+        }
+      };
+    } catch (error) {
+      console.error('Error fetching agent stats:', error);
+      return {
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+        error: error.message
+      };
+    }
+  }
+
+  async deleteAgent(agentName: string) {
+    try {
+      const deleted = await this.createElizaAgentRepository.deleteByName(agentName);
+
+      if (deleted) {
+        return {
+          status: HttpStatus.OK,
+          message: `Agent "${agentName}" successfully deleted`
+        };
+      } else {
+        return {
+          status: HttpStatus.NOT_FOUND,
+          message: `Agent "${agentName}" not found`
+        };
+      }
+    } catch (error) {
+      console.error('Error deleting agent:', error);
+      return {
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+        error: error.message
+      };
+    }
+  }
+
   async createRootstockAgent(createElizaAgentDto: CreateElizaAgentDto) {
     try {
-      //store the agent info in db
+      // Log the received data for debugging
+      console.log('Received data:', JSON.stringify(createElizaAgentDto, null, 2));
 
+      // Validate required fields
+      if (!createElizaAgentDto.agentName) {
+        return {
+          status: HttpStatus.BAD_REQUEST,
+          error: 'Agent name is required'
+        };
+      }
+
+      if (!createElizaAgentDto.bio || !Array.isArray(createElizaAgentDto.bio) || createElizaAgentDto.bio.length === 0) {
+        return {
+          status: HttpStatus.BAD_REQUEST,
+          error: 'Bio is required and must be an array of strings'
+        };
+      }
+
+      if (!createElizaAgentDto.type) {
+        return {
+          status: HttpStatus.BAD_REQUEST,
+          error: 'Type is required'
+        };
+      }
+
+      if (!createElizaAgentDto.knowledge || !Array.isArray(createElizaAgentDto.knowledge)) {
+        return {
+          status: HttpStatus.BAD_REQUEST,
+          error: 'Knowledge is required and must be an array of strings'
+        };
+      }
+
+      //store the agent info in db
       let readFile;
 
       console.log('dirname', __dirname);
