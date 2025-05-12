@@ -46,6 +46,8 @@ Each agent is deployed as a smart contract on the Rootstock Testnet blockchain, 
 - **AI**: OpenAI API
 - **Authentication**: JWT-based authentication
 
+## Smart Contracts
+
 All agent smart contracts created during hackathon: 
 [0x3a18f9f0E07269D2a9161A0E83745b4e8BbAdEE8](https://explorer.testnet.rootstock.io/address/0x3a18f9f0E07269D2a9161A0E83745b4e8BbAdEE8?tab=txs)
 
